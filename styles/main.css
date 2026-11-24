@@ -1,0 +1,199 @@
+/* Prism Run's look: a neon voxel tunnel at night. The game owns its palette in
+   both appearances, because a dark tube full of glowing blocks is the point. */
+
+@font-face {
+  /* The family name inside the file is "8BIT WONDER" — spelled any other way
+     the browser quietly falls back to a monospace face. */
+  font-family: '8BIT WONDER';
+  src: url('../assets/fonts/8bit-wonder.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  /* A pixel font that swapped in mid-run would reflow every readout. */
+  font-display: block;
+}
+
+:root {
+  color-scheme: dark;
+  --pr-void: #05060f;
+  --pr-cyan: #38f0ff;
+  --pr-magenta: #ff2e88;
+  --pr-amber: #ffc23d;
+  --pr-ink: #e6ecff;
+  --pr-dim: #7d88bd;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--pr-void);
+  color: var(--pr-ink);
+  font: 16px/1.4 '8BIT WONDER', monospace;
+  /* A pixel font wants hard edges, not a browser's idea of smoothing. */
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  letter-spacing: 0.5px;
+  /* The canvas handles its own gestures; the page must not pan or bounce. */
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The 3D canvas fills the panel and bleeds under the device's own chrome. */
+#stage {
+  position: fixed;
+  inset: 0;
+}
+
+#stage canvas { display: block; width: 100%; height: 100%; }
+
+/* Three has no text and no hit-testing, so every control and readout is a DOM
+   element sitting over the canvas. The layer itself is transparent to touch —
+   only its children take input — otherwise it would swallow every tap meant
+   for the world behind it. */
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  /* Keeps controls clear of the notch and the home indicator. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* Children opt in to input one by one: a readout must never eat a drag that
+   happens to start on top of it. */
+
+/* --- readouts ---------------------------------------------------------- */
+
+.hud-text {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  font-weight: normal;
+  pointer-events: none;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+/* A surge doubles the score, and the readouts say so. */
+.hud-text.surge {
+  color: var(--pr-amber) !important;
+  text-shadow: 0 0 16px rgba(255, 194, 61, 0.85) !important;
+}
+
+.pr-lives {
+  position: absolute;
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.pr-pip {
+  display: block;
+  width: 13px;
+  height: 13px;
+  background: var(--pr-magenta);
+  transform: rotate(45deg);
+  box-shadow: 0 0 12px rgba(255, 46, 136, 0.75);
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.pr-pip.off {
+  background: rgba(255, 46, 136, 0.14);
+  box-shadow: none;
+}
+
+/* --- buttons ----------------------------------------------------------- */
+
+.hud-button {
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: 50%;
+  pointer-events: auto;
+  background-color: rgba(96, 132, 255, 0.16);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 46%;
+  box-shadow: inset 0 0 0 2px rgba(120, 200, 255, 0.42),
+              0 0 18px rgba(56, 240, 255, 0.16);
+  transition: transform 90ms ease, background-color 90ms ease;
+  cursor: pointer;
+}
+
+.hud-button:active {
+  transform: scale(0.94);
+  background-color: rgba(56, 240, 255, 0.34);
+}
+
+/* The thumb controls sit in their own layer, clear of the notches and of the
+   very bottom of the screen, where the device's own gesture lives. */
+.pr-pad {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pr-pad > * { pointer-events: auto; }
+
+/* --- start / pause / game-over card ------------------------------------ */
+
+.pr-overlay {
+  /* Fixed rather than absolute: the backdrop has to dim the safe-area strips
+     too, which the padded #hud box does not cover. */
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 46%,
+              rgba(12, 16, 46, 0.32), rgba(3, 4, 12, 0.9));
+  opacity: 1;
+  transition: opacity 200ms ease;
+}
+
+.pr-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pr-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 22px;
+  text-align: center;
+}
+
+.pr-title {
+  font-size: clamp(24px, 7.4vw, 56px);
+  line-height: 1.15;
+  letter-spacing: 3px;
+  color: var(--pr-cyan);
+  text-transform: uppercase;
+  text-shadow: 0 0 18px rgba(56, 240, 255, 0.6),
+               0 0 48px rgba(56, 240, 255, 0.28);
+}
+
+.pr-sub {
+  font-size: clamp(10px, 2.9vw, 14px);
+  letter-spacing: 2px;
+  color: var(--pr-ink);
+  text-transform: uppercase;
+  max-width: 22em;
+}
+
+.pr-hints {
+  white-space: pre-line;
+  font-size: clamp(9px, 2.5vw, 12px);
+  line-height: 2;
+  letter-spacing: 1px;
+  color: var(--pr-dim);
+  text-transform: uppercase;
+  margin-top: 4px;
+}

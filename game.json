@@ -1,0 +1,7 @@
+{
+  "name": "Prism Run",
+  "version": "1.0.0",
+  "entry": "index.html",
+  "engine": "three 0.185.0",
+  "orientation": "any"
+}
